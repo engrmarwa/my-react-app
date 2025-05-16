@@ -11,6 +11,8 @@ phases:
     commands:
       - echo Building React App...
       - npm run build
+      - echo Building Docker Image...
+      - docker build -t $ImageName -f ./Dockerfile .
 artifacts:
   files:
     - '**/*'
