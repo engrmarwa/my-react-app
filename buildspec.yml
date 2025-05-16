@@ -1,19 +1,29 @@
 version: 0.2
 
+env:
+  variables:
+    AWS_REGION: us-east-1
+    IMAGE_REPO_NAME: myapp-image
+    IMAGE_TAG: latest
+
 phases:
-  install:
-    runtime-versions:
-      nodejs: 18
+  pre_build:
     commands:
-      - echo Installing dependencies...
-      - npm install
+      - echo Logging in to Amazon ECR...
+      - $(aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin <your-account-id>.dkr.ecr.$AWS_REGION.amazonaws.com)
+      - REPOSITORY_URI=<your-account-id>.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - IMAGE_URI=$REPOSITORY_URI:$IMAGE_TAG
   build:
     commands:
-      - echo Building React App...
-      - npm run build
-      - echo Building Docker Image...
-      - docker build -t $ImageName -f ./Dockerfile .
+      - echo Building the Docker image...
+      - docker build -t $IMAGE_REPO_NAME .
+      - docker tag $IMAGE_REPO_NAME:latest $IMAGE_URI
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
+      - docker push $IMAGE_URI
+      - printf '[{"name":"myapp-container","imageUri":"%s"}]' $IMAGE_URI > imagedefinitions.json
+
 artifacts:
   files:
-    - '**/*'
-  base-directory: build
+    - imagedefinitions.json
